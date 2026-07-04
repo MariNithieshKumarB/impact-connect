@@ -10,7 +10,7 @@ import { MapPin, Calendar, Users, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/opportunities")({
+export const Route = createFileRoute("/_authenticated/opportunities/")({
   component: OpportunitiesList,
 });
 
