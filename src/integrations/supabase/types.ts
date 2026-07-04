@@ -14,16 +14,233 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          opportunity_id: string
+          status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
+          volunteer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          opportunity_id: string
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+          volunteer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          opportunity_id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+          volunteer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_volunteer_id_fkey"
+            columns: ["volunteer_id"]
+            isOneToOne: false
+            referencedRelation: "volunteers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      ngos: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          created_at: string
+          focus_area: string | null
+          mission: string | null
+          organization_name: string
+          profile_id: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          created_at?: string
+          focus_area?: string | null
+          mission?: string | null
+          organization_name?: string
+          profile_id: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          created_at?: string
+          focus_area?: string | null
+          mission?: string | null
+          organization_name?: string
+          profile_id?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ngos_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunities: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          description: string
+          id: string
+          location: string | null
+          ngo_id: string
+          required_skills: string[]
+          status: Database["public"]["Enums"]["opportunity_status"]
+          title: string
+          updated_at: string
+          volunteers_needed: number
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          id?: string
+          location?: string | null
+          ngo_id: string
+          required_skills?: string[]
+          status?: Database["public"]["Enums"]["opportunity_status"]
+          title: string
+          updated_at?: string
+          volunteers_needed?: number
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          id?: string
+          location?: string | null
+          ngo_id?: string
+          required_skills?: string[]
+          status?: Database["public"]["Enums"]["opportunity_status"]
+          title?: string
+          updated_at?: string
+          volunteers_needed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_ngo_id_fkey"
+            columns: ["ngo_id"]
+            isOneToOne: false
+            referencedRelation: "ngos"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          bio: string | null
+          created_at: string
+          full_name: string
+          id: string
+          location: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          avatar?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string
+          id: string
+          location?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          avatar?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          location?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      volunteers: {
+        Row: {
+          availability: string | null
+          created_at: string
+          experience: string | null
+          interests: string[]
+          preferred_location: string | null
+          profile_id: string
+          skills: string[]
+          updated_at: string
+        }
+        Insert: {
+          availability?: string | null
+          created_at?: string
+          experience?: string | null
+          interests?: string[]
+          preferred_location?: string | null
+          profile_id: string
+          skills?: string[]
+          updated_at?: string
+        }
+        Update: {
+          availability?: string | null
+          created_at?: string
+          experience?: string | null
+          interests?: string[]
+          preferred_location?: string | null
+          profile_id?: string
+          skills?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      application_status: "pending" | "accepted" | "rejected" | "withdrawn"
+      opportunity_status: "open" | "closed" | "draft"
+      user_role: "volunteer" | "ngo"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +367,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      application_status: ["pending", "accepted", "rejected", "withdrawn"],
+      opportunity_status: ["open", "closed", "draft"],
+      user_role: ["volunteer", "ngo"],
+    },
   },
 } as const
