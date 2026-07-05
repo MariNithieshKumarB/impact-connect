@@ -117,6 +117,30 @@ function AuthPage() {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Sign In
                 </Button>
               </form>
+
+              <div className="relative my-2 flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
+                NEW HERE? CREATE A FREE ACCOUNT
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setRole("volunteer"); setTab("signup"); }}
+                  className="border-primary/40 hover:bg-primary/10"
+                >
+                  <Heart className="mr-2 h-4 w-4 text-primary" /> As Volunteer
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setRole("ngo"); setTab("signup"); }}
+                  className="border-secondary/40 hover:bg-secondary/10"
+                >
+                  <Building2 className="mr-2 h-4 w-4 text-secondary" /> As NGO
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="signup" className="mt-6 space-y-4">
