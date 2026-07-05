@@ -120,7 +120,13 @@ function ProfilePage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label>Focus Area</Label>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label>Focus Area</Label>
+                      <AISuggestButton field="focus_area" role="ngo"
+                        context={`Org: ${form.full_name}. Mission: ${form.mission}`}
+                        currentValue={form.focus_area ?? ""}
+                        onApply={(v) => setForm({ ...form, focus_area: v })} />
+                    </div>
                     <Input placeholder="Education, Environment…" value={form.focus_area ?? ""} onChange={(e) => setForm({ ...form, focus_area: e.target.value })} />
                   </div>
                   <div>
@@ -128,7 +134,12 @@ function ProfilePage() {
                     <Input type="email" value={form.contact_email ?? ""} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
                   </div>
                   <div>
-                    <Label>Address</Label>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label>Address</Label>
+                      <AISuggestButton field="location" role="ngo" mode="pick"
+                        context={`Org: ${form.full_name}. Location hint: ${form.location}`}
+                        onApply={(v) => setForm({ ...form, address: v })} label="AI suggest" />
+                    </div>
                     <Input value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
                   </div>
                   <div>
@@ -148,17 +159,53 @@ function ProfilePage() {
                     <Label>Interests (comma separated)</Label>
                     <Input value={form.interests ?? ""} onChange={(e) => setForm({ ...form, interests: e.target.value })} placeholder="Education, Climate, Health" />
                   </div>
+                <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label>Availability</Label>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label>Skills (comma separated)</Label>
+                      <AISuggestButton field="skills" role="volunteer"
+                        context={`Bio: ${form.bio}. Interests: ${form.interests}. Experience: ${form.experience}`}
+                        currentValue={form.skills ?? ""}
+                        onApply={(v) => setForm({ ...form, skills: v })} />
+                    </div>
+                    <Input value={form.skills ?? ""} onChange={(e) => setForm({ ...form, skills: e.target.value })} placeholder="Teaching, Web Dev, Photography" />
+                  </div>
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label>Interests (comma separated)</Label>
+                      <AISuggestButton field="interests" role="volunteer"
+                        context={`Bio: ${form.bio}. Skills: ${form.skills}`}
+                        currentValue={form.interests ?? ""}
+                        onApply={(v) => setForm({ ...form, interests: v })} />
+                    </div>
+                    <Input value={form.interests ?? ""} onChange={(e) => setForm({ ...form, interests: e.target.value })} placeholder="Education, Climate, Health" />
+                  </div>
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label>Availability</Label>
+                      <AISuggestButton field="availability" role="volunteer" mode="pick"
+                        context={`Skills: ${form.skills}`}
+                        onApply={(v) => setForm({ ...form, availability: v })} />
+                    </div>
                     <Input value={form.availability ?? ""} onChange={(e) => setForm({ ...form, availability: e.target.value })} placeholder="Weekends, ~5 hrs/wk" />
                   </div>
                   <div>
-                    <Label>Preferred Location</Label>
+                    <div className="mb-1 flex items-center justify-between">
+                      <Label>Preferred Location</Label>
+                      <AISuggestButton field="location" role="volunteer" mode="pick"
+                        context={`Current location: ${form.location}. Interests: ${form.interests}`}
+                        onApply={(v) => setForm({ ...form, preferred_location: v })} />
+                    </div>
                     <Input value={form.preferred_location ?? ""} onChange={(e) => setForm({ ...form, preferred_location: e.target.value })} />
                   </div>
                 </div>
                 <div>
-                  <Label>Experience</Label>
+                  <div className="mb-1 flex items-center justify-between">
+                    <Label>Experience</Label>
+                    <AISuggestButton field="experience" role="volunteer" mode="replace-text"
+                      context={`Name: ${form.full_name}. Skills: ${form.skills}. Interests: ${form.interests}`}
+                      onApply={(v) => setForm({ ...form, experience: v })} label="AI draft experience" />
+                  </div>
                   <Textarea rows={3} value={form.experience ?? ""} onChange={(e) => setForm({ ...form, experience: e.target.value })} />
                 </div>
               </>
