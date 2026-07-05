@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { MapPin, Calendar, Users, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AISuggestButton } from "@/components/AISuggestButton";
 
 export const Route = createFileRoute("/_authenticated/opportunities/")({
   component: OpportunitiesList,
@@ -61,9 +62,14 @@ function OpportunitiesList() {
           <h1 className="font-display text-3xl font-bold">Opportunities</h1>
           <p className="text-muted-foreground">Discover open opportunities from verified NGOs.</p>
         </div>
-        <div className="relative w-full md:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search opportunities…" className="pl-9" />
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+          <div className="relative w-full md:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search opportunities…" className="pl-9" />
+          </div>
+          <AISuggestButton field="search" mode="pick" role={profile?.role}
+            context={`User interests hint: ${q}`}
+            onApply={(v) => setQ(v)} label="AI smart search" />
         </div>
       </div>
 
