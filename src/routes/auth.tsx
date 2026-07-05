@@ -72,6 +72,35 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   };
 
+  const handleQuickStart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (fullName.trim().length < 2) return toast.error("Please enter your name");
+    setLoading(true);
+    const slug = fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20) || "guest";
+    const rand = Math.random().toString(36).slice(2, 10);
+    const quickEmail = `${slug}-${rand}@quick.impactlink.app`;
+    const quickPassword = `IL-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
+    const { error } = await supabase.auth.signUp({
+      email: quickEmail,
+      password: quickPassword,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: { full_name: fullName.trim(), role },
+      },
+    });
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+    // Ensure session in case email confirmation isn't auto (fallback sign-in)
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) {
+      await supabase.auth.signInWithPassword({ email: quickEmail, password: quickPassword });
+    }
+    setLoading(false);
+    toast.success(`Welcome, ${fullName.trim()}!`);
+    navigate({ to: "/dashboard" });
+
   const handleGoogle = async () => {
     setLoading(true);
     // Persist chosen role so the trigger can pick it up on first sign-in
