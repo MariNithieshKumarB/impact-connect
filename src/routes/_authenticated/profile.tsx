@@ -152,15 +152,6 @@ function ProfilePage() {
               <>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label>Skills (comma separated)</Label>
-                    <Input value={form.skills ?? ""} onChange={(e) => setForm({ ...form, skills: e.target.value })} placeholder="Teaching, Web Dev, Photography" />
-                  </div>
-                  <div>
-                    <Label>Interests (comma separated)</Label>
-                    <Input value={form.interests ?? ""} onChange={(e) => setForm({ ...form, interests: e.target.value })} placeholder="Education, Climate, Health" />
-                  </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
                     <div className="mb-1 flex items-center justify-between">
                       <Label>Skills (comma separated)</Label>
                       <AISuggestButton field="skills" role="volunteer"
