@@ -31,7 +31,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"login" | "signup">(search.mode === "signup" ? "signup" : "login");
+  const [tab, setTab] = useState<"login" | "signup" | "quick">(search.mode === "signup" ? "signup" : "quick");
   const [role, setRole] = useState<"volunteer" | "ngo">(search.role ?? "volunteer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
