@@ -100,6 +100,9 @@ function AuthPage() {
     setLoading(false);
     toast.success(`Welcome, ${fullName.trim()}!`);
     navigate({ to: "/dashboard" });
+  };
+
+
 
   const handleGoogle = async () => {
     setLoading(true);
