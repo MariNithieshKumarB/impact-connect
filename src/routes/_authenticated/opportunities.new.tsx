@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { AISuggestButton } from "@/components/AISuggestButton";
 
 export const Route = createFileRoute("/_authenticated/opportunities/new")({
   component: NewOpportunity,
@@ -55,11 +56,22 @@ function NewOpportunity() {
               <Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Weekend Reading Coach" />
             </div>
             <div>
-              <Label>Description</Label>
+              <div className="mb-1 flex items-center justify-between">
+                <Label>Description</Label>
+                <AISuggestButton field="description" mode="replace-text" role="ngo"
+                  context={`Opportunity title: ${form.title}. Skills: ${form.required_skills}. Location: ${form.location}.`}
+                  onApply={(v) => setForm({ ...form, description: v })} label="AI draft description" />
+              </div>
               <Textarea required rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-              <Label>Required Skills (comma separated)</Label>
+              <div className="mb-1 flex items-center justify-between">
+                <Label>Required Skills (comma separated)</Label>
+                <AISuggestButton field="required_skills" role="ngo"
+                  context={`Opportunity: ${form.title}. ${form.description}`}
+                  currentValue={form.required_skills}
+                  onApply={(v) => setForm({ ...form, required_skills: v })} />
+              </div>
               <Input value={form.required_skills} onChange={(e) => setForm({ ...form, required_skills: e.target.value })} placeholder="Teaching, Patience, English" />
             </div>
             <div className="grid gap-4 md:grid-cols-3">
