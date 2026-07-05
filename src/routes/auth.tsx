@@ -31,7 +31,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"login" | "signup">(search.mode === "signup" ? "signup" : "login");
+  const [tab, setTab] = useState<"login" | "signup" | "quick">(search.mode === "signup" ? "signup" : "quick");
   const [role, setRole] = useState<"volunteer" | "ngo">(search.role ?? "volunteer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,6 +72,38 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   };
 
+  const handleQuickStart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (fullName.trim().length < 2) return toast.error("Please enter your name");
+    setLoading(true);
+    const slug = fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20) || "guest";
+    const rand = Math.random().toString(36).slice(2, 10);
+    const quickEmail = `${slug}-${rand}@quick.impactlink.app`;
+    const quickPassword = `IL-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
+    const { error } = await supabase.auth.signUp({
+      email: quickEmail,
+      password: quickPassword,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: { full_name: fullName.trim(), role },
+      },
+    });
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+    // Ensure session in case email confirmation isn't auto (fallback sign-in)
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) {
+      await supabase.auth.signInWithPassword({ email: quickEmail, password: quickPassword });
+    }
+    setLoading(false);
+    toast.success(`Welcome, ${fullName.trim()}!`);
+    navigate({ to: "/dashboard" });
+  };
+
+
+
   const handleGoogle = async () => {
     setLoading(true);
     // Persist chosen role so the trigger can pick it up on first sign-in
@@ -97,11 +129,59 @@ function AuthPage() {
         <Link to="/" className="mb-8"><Logo /></Link>
 
         <div className="glass w-full rounded-3xl p-8 shadow-[var(--shadow-elegant)]">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
-            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup" | "quick")}>
+            <TabsList className="grid w-full grid-cols-3 bg-muted/50">
+              <TabsTrigger value="quick">Quick Start</TabsTrigger>
               <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Create Account</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="quick" className="mt-6 space-y-4">
+              <div className="space-y-1">
+                <h3 className="font-display text-lg font-semibold">Jump right in</h3>
+                <p className="text-xs text-muted-foreground">
+                  Just enter your name and pick your role — we'll create a free account instantly. No email or password needed.
+                </p>
+              </div>
+              <form onSubmit={handleQuickStart} className="space-y-4">
+                <div>
+                  <Label htmlFor="q-name">Your name {role === "ngo" ? "(organization)" : ""}</Label>
+                  <Input
+                    id="q-name"
+                    required
+                    minLength={2}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder={role === "ngo" ? "Green Earth Foundation" : "Alex Rivera"}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    onClick={() => setRole("volunteer")}
+                    className={`h-auto flex-col gap-1 py-3 ${role === "volunteer" ? "bg-gradient-to-r from-primary to-primary-glow text-white" : "bg-muted text-foreground hover:bg-muted/70"}`}
+                  >
+                    <Heart className="h-5 w-5" />
+                    <span className="text-sm font-medium">Enter as Volunteer</span>
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    onClick={() => setRole("ngo")}
+                    className={`h-auto flex-col gap-1 py-3 ${role === "ngo" ? "bg-gradient-to-r from-secondary to-secondary/70 text-white" : "bg-muted text-foreground hover:bg-muted/70"}`}
+                  >
+                    <Building2 className="h-5 w-5" />
+                    <span className="text-sm font-medium">Enter as NGO</span>
+                  </Button>
+                </div>
+                {loading && (
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Setting up your account…
+                  </div>
+                )}
+              </form>
+            </TabsContent>
 
             <TabsContent value="login" className="mt-6 space-y-4">
               <form onSubmit={handleLogin} className="space-y-4">
