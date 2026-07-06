@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
+import { computeMatch } from "@/lib/matching";
+import { MatchDetails } from "@/components/MatchBadge";
 
 export const Route = createFileRoute("/_authenticated/applicants")({
   component: Applicants,
@@ -22,11 +24,33 @@ function Applicants() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, opportunities!inner(id, title, ngo_id), volunteers(profile_id, skills, interests, availability), profiles:volunteer_id(full_name, location)")
+        .select(
+          "*, opportunities!inner(id, title, ngo_id, required_skills, location, description), volunteers(profile_id, skills, interests, availability, experience, preferred_location), profiles:volunteer_id(full_name, location)",
+        )
         .eq("opportunities.ngo_id", profile!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      const ranked = (data ?? []).map((a: any) => {
+        const match = computeMatch(
+          {
+            skills: a.volunteers?.skills,
+            interests: a.volunteers?.interests,
+            availability: a.volunteers?.availability,
+            experience: a.volunteers?.experience,
+            preferred_location: a.volunteers?.preferred_location,
+            location: a.profiles?.location,
+          },
+          {
+            title: a.opportunities?.title,
+            description: a.opportunities?.description,
+            required_skills: a.opportunities?.required_skills,
+            location: a.opportunities?.location,
+          },
+        );
+        return { ...a, match };
+      });
+      ranked.sort((a: any, b: any) => b.match.score - a.match.score);
+      return ranked;
     },
   });
 
@@ -39,7 +63,10 @@ function Applicants() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="font-display text-3xl font-bold">Applicants</h1>
+      <div>
+        <h1 className="font-display text-3xl font-bold">Applicants</h1>
+        <p className="text-sm text-muted-foreground">Ranked by AI match score — highest fit first.</p>
+      </div>
       {isLoading ? <p className="text-muted-foreground">Loading…</p> :
         !data?.length ? (
           <Card className="glass border-border/50"><CardContent className="p-12 text-center text-muted-foreground">No applications yet.</CardContent></Card>
@@ -66,6 +93,7 @@ function Applicants() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <MatchDetails match={a.match} />
                   <div className="flex flex-wrap gap-1.5">
                     {(a.volunteers?.skills ?? []).slice(0, 8).map((s: string) => (
                       <Badge key={s} variant="outline" className="border-primary/30">{s}</Badge>
