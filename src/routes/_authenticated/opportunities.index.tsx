@@ -6,10 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { MapPin, Calendar, Users, Search } from "lucide-react";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin, Calendar, Users, Search, SlidersHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AISuggestButton } from "@/components/AISuggestButton";
+import { computeMatch } from "@/lib/matching";
+import { MatchBadge } from "@/components/MatchBadge";
 
 export const Route = createFileRoute("/_authenticated/opportunities/")({
   component: OpportunitiesList,
@@ -19,6 +22,11 @@ function OpportunitiesList() {
   const { data: profile } = useProfile();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [skill, setSkill] = useState("");
+  const [loc, setLoc] = useState("");
+  const [cause, setCause] = useState<string>("all");
+  const [availability, setAvailability] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"match" | "recent">("match");
 
   const { data: opps, isLoading } = useQuery({
     queryKey: ["all-opps"],
@@ -29,6 +37,15 @@ function OpportunitiesList() {
         .eq("status", "open")
         .order("created_at", { ascending: false });
       if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: me } = useQuery({
+    enabled: !!profile && profile.role === "volunteer",
+    queryKey: ["me-volunteer", profile?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("volunteers").select("*").eq("profile_id", profile!.id).maybeSingle();
       return data;
     },
   });
@@ -50,17 +67,58 @@ function OpportunitiesList() {
     qc.invalidateQueries({ queryKey: ["my-app-ids"] });
   };
 
-  const filtered = (opps ?? []).filter((o) => {
+  const causes = useMemo(() => {
+    const set = new Set<string>();
+    (opps ?? []).forEach((o: any) => o.ngos?.focus_area && set.add(o.ngos.focus_area));
+    return [...set].sort();
+  }, [opps]);
+
+  const enriched = useMemo(() => {
     const s = q.toLowerCase();
-    return !s || o.title.toLowerCase().includes(s) || o.description.toLowerCase().includes(s) || (o.location ?? "").toLowerCase().includes(s);
-  });
+    const sk = skill.toLowerCase().trim();
+    const lo = loc.toLowerCase().trim();
+    const list = (opps ?? [])
+      .filter((o: any) => {
+        const matchesQ = !s || o.title.toLowerCase().includes(s) || o.description.toLowerCase().includes(s) || (o.location ?? "").toLowerCase().includes(s);
+        const matchesSkill = !sk || (o.required_skills ?? []).some((r: string) => r.toLowerCase().includes(sk));
+        const matchesLoc = !lo || (o.location ?? "").toLowerCase().includes(lo);
+        const matchesCause = cause === "all" || o.ngos?.focus_area === cause;
+        return matchesQ && matchesSkill && matchesLoc && matchesCause;
+      })
+      .map((o: any) => ({
+        ...o,
+        match: profile?.role === "volunteer" && me
+          ? computeMatch(
+              { ...me, location: profile?.location },
+              { title: o.title, description: o.description, required_skills: o.required_skills, location: o.location, ngos: o.ngos },
+            )
+          : null,
+      }));
+
+    if (availability !== "all" && profile?.role === "volunteer" && me?.availability) {
+      // filter opportunities the volunteer is available for — availability is on the volunteer, not opportunity,
+      // so we soft-filter by matching keyword the volunteer set (e.g. weekends).
+      const key = availability.toLowerCase();
+      if (!me.availability.toLowerCase().includes(key)) {
+        // volunteer's saved availability doesn't include selected — return empty ranked
+        return [];
+      }
+    }
+
+    if (sortBy === "match") {
+      list.sort((a: any, b: any) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
+    }
+    return list;
+  }, [opps, q, skill, loc, cause, availability, sortBy, profile, me]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold">Opportunities</h1>
-          <p className="text-muted-foreground">Discover open opportunities from verified NGOs.</p>
+          <p className="text-muted-foreground">
+            {profile?.role === "volunteer" ? "Ranked by your AI match score." : "Discover open opportunities from verified NGOs."}
+          </p>
         </div>
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
           <div className="relative w-full md:w-72">
@@ -73,13 +131,49 @@ function OpportunitiesList() {
         </div>
       </div>
 
+      <Card className="glass border-border/50">
+        <CardContent className="grid gap-3 p-4 md:grid-cols-5">
+          <div className="md:col-span-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <SlidersHorizontal className="h-3.5 w-3.5" /> Smart filters
+          </div>
+          <Input placeholder="Skill (e.g. Teaching)" value={skill} onChange={(e) => setSkill(e.target.value)} />
+          <Input placeholder="Location" value={loc} onChange={(e) => setLoc(e.target.value)} />
+          <Select value={cause} onValueChange={setCause}>
+            <SelectTrigger><SelectValue placeholder="Cause" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All causes</SelectItem>
+              {causes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Select value={availability} onValueChange={setAvailability}>
+              <SelectTrigger><SelectValue placeholder="Availability" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any time</SelectItem>
+                <SelectItem value="weekend">Weekends</SelectItem>
+                <SelectItem value="weekday">Weekdays</SelectItem>
+                <SelectItem value="evening">Evenings</SelectItem>
+                <SelectItem value="flexible">Flexible</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as "match" | "recent")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="match">Best match</SelectItem>
+                <SelectItem value="recent">Most recent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {isLoading ? (
         <p className="text-muted-foreground">Loading…</p>
-      ) : filtered.length === 0 ? (
-        <Card className="glass border-border/50"><CardContent className="p-12 text-center text-muted-foreground">No opportunities yet — check back soon.</CardContent></Card>
+      ) : enriched.length === 0 ? (
+        <Card className="glass border-border/50"><CardContent className="p-12 text-center text-muted-foreground">No opportunities match your filters.</CardContent></Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map((o: any) => {
+          {enriched.map((o: any) => {
             const applied = myApps?.has(o.id);
             return (
               <Card key={o.id} className="glass group border-border/50 transition-all hover:-translate-y-1 hover:border-primary/40">
@@ -91,6 +185,9 @@ function OpportunitiesList() {
                     </div>
                     {o.ngos?.focus_area && <Badge variant="secondary" className="shrink-0">{o.ngos.focus_area}</Badge>}
                   </div>
+                  {o.match && (
+                    <div className="pt-2"><MatchBadge match={o.match} compact /></div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="line-clamp-3 text-sm text-muted-foreground">{o.description}</p>
@@ -99,6 +196,11 @@ function OpportunitiesList() {
                       <Badge key={s} variant="outline" className="border-primary/30">{s}</Badge>
                     ))}
                   </div>
+                  {o.match && o.match.missingSkills.length > 0 && (
+                    <p className="text-xs text-amber-300/90">
+                      Skills to grow: {o.match.missingSkills.slice(0, 3).join(", ")}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                     {o.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {o.location}</span>}
                     {o.deadline && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(o.deadline).toLocaleDateString()}</span>}

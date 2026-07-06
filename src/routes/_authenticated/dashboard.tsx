@@ -4,7 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Compass, FileText, PlusCircle, Users, TrendingUp, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Compass, FileText, PlusCircle, Users, TrendingUp, Sparkles, Trophy } from "lucide-react";
+import { computeMatch } from "@/lib/matching";
+import { MatchBadge } from "@/components/MatchBadge";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardHome,
@@ -32,16 +35,36 @@ function DashboardHome() {
     enabled: profile?.role === "volunteer",
     queryKey: ["vol-stats", profile?.id],
     queryFn: async () => {
-      const [apps, opps] = await Promise.all([
-        supabase.from("applications").select("id, status").eq("volunteer_id", profile!.id),
-        supabase.from("opportunities").select("id", { count: "exact", head: true }).eq("status", "open"),
+      const [apps, opps, me] = await Promise.all([
+        supabase.from("applications").select("id, status, opportunity_id").eq("volunteer_id", profile!.id),
+        supabase.from("opportunities").select("*, ngos(organization_name, focus_area)").eq("status", "open"),
+        supabase.from("volunteers").select("*").eq("profile_id", profile!.id).maybeSingle(),
       ]);
       const applications = apps.data ?? [];
+      const openOpps = opps.data ?? [];
+      const appliedIds = new Set(applications.map((a) => a.opportunity_id));
+      const ranked = me.data
+        ? openOpps
+            .map((o: any) => ({
+              o,
+              match: computeMatch(
+                { ...me.data, location: profile?.location },
+                { title: o.title, description: o.description, required_skills: o.required_skills, location: o.location, ngos: o.ngos },
+              ),
+            }))
+            .sort((a, b) => b.match.score - a.match.score)
+        : [];
+      const avgMatch = ranked.length
+        ? Math.round(ranked.slice(0, 10).reduce((s, r) => s + r.match.score, 0) / Math.min(10, ranked.length))
+        : 0;
       return {
         total: applications.length,
         accepted: applications.filter((a) => a.status === "accepted").length,
         pending: applications.filter((a) => a.status === "pending").length,
-        openOpps: opps.count ?? 0,
+        openOpps: openOpps.length,
+        recommendations: ranked.filter((r) => !appliedIds.has(r.o.id)).slice(0, 4),
+        top: ranked[0],
+        avgMatch,
       };
     },
   });
@@ -52,13 +75,17 @@ function DashboardHome() {
     queryFn: async () => {
       const [opps, apps] = await Promise.all([
         supabase.from("opportunities").select("id, status").eq("ngo_id", profile!.id),
-        supabase.from("applications").select("id, opportunities!inner(ngo_id)").eq("opportunities.ngo_id", profile!.id),
+        supabase.from("applications").select("id, status, opportunities!inner(ngo_id)").eq("opportunities.ngo_id", profile!.id),
       ]);
       const opportunities = opps.data ?? [];
+      const applications = apps.data ?? [];
+      const accepted = applications.filter((a: any) => a.status === "accepted").length;
+      const rate = applications.length ? Math.round((accepted / applications.length) * 100) : 0;
       return {
         totalOpps: opportunities.length,
         openOpps: opportunities.filter((o) => o.status === "open").length,
-        applicants: apps.data?.length ?? 0,
+        applicants: applications.length,
+        selectionRate: rate,
       };
     },
   });
@@ -79,11 +106,75 @@ function DashboardHome() {
       {profile?.role === "volunteer" ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="AI Match Score" value={`${vol.data?.avgMatch ?? 0}%`} icon={Sparkles} hint="Avg. across top opportunities" />
             <StatCard label="Applications" value={vol.data?.total ?? 0} icon={FileText} />
-            <StatCard label="Accepted" value={vol.data?.accepted ?? 0} icon={Sparkles} hint="Ready to make impact" />
+            <StatCard label="Accepted" value={vol.data?.accepted ?? 0} icon={Trophy} hint="Ready to make impact" />
             <StatCard label="Pending Review" value={vol.data?.pending ?? 0} icon={TrendingUp} />
-            <StatCard label="Open Opportunities" value={vol.data?.openOpps ?? 0} icon={Compass} />
           </div>
+
+          {vol.data?.top && (
+            <Card className="glass border-primary/30">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-primary" />
+                  <CardTitle>Top Match for You</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-display text-xl font-semibold">{vol.data.top.o.title}</h3>
+                    <p className="text-sm text-muted-foreground">{vol.data.top.o.ngos?.organization_name}</p>
+                  </div>
+                  <MatchBadge match={vol.data.top.match} />
+                </div>
+                <p className="text-sm text-muted-foreground">{vol.data.top.match.recommendation}</p>
+                <Button asChild className="bg-gradient-to-r from-primary to-primary-glow text-white">
+                  <Link to="/opportunities">View & Apply</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-xl font-semibold">Recommended Opportunities</h2>
+              <Button asChild variant="outline" size="sm"><Link to="/opportunities">See all</Link></Button>
+            </div>
+            {vol.data?.recommendations?.length ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                {vol.data.recommendations.map(({ o, match }) => (
+                  <Card key={o.id} className="glass border-border/50">
+                    <CardContent className="space-y-2 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{o.title}</div>
+                          <div className="text-xs text-muted-foreground">{o.ngos?.organization_name}</div>
+                        </div>
+                        <MatchBadge match={match} compact />
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(o.required_skills ?? []).slice(0, 4).map((s: string) => (
+                          <Badge key={s} variant="outline" className="border-primary/30 text-xs">{s}</Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{match.recommendation}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="glass border-border/50">
+                <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  Complete your profile with skills, interests & availability to unlock AI-matched recommendations.
+                  <div className="mt-3">
+                    <Button asChild size="sm" variant="outline"><Link to="/profile">Update profile</Link></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
           <Card className="glass border-border/50">
             <CardContent className="flex flex-col items-start gap-4 p-8 md:flex-row md:items-center md:justify-between">
               <div>
@@ -98,10 +189,11 @@ function DashboardHome() {
         </>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Total Opportunities" value={ngo.data?.totalOpps ?? 0} icon={FileText} />
             <StatCard label="Currently Open" value={ngo.data?.openOpps ?? 0} icon={Sparkles} />
             <StatCard label="Total Applicants" value={ngo.data?.applicants ?? 0} icon={Users} />
+            <StatCard label="Selection Rate" value={`${ngo.data?.selectionRate ?? 0}%`} icon={TrendingUp} hint="Accepted / total" />
           </div>
           <Card className="glass border-border/50">
             <CardContent className="flex flex-col items-start gap-4 p-8 md:flex-row md:items-center md:justify-between">
