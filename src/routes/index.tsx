@@ -6,6 +6,8 @@ import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import hero from "@/assets/hero.jpg";
+import community from "@/assets/community.jpg";
+import network from "@/assets/network.jpg";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -193,6 +195,52 @@ function LandingPage() {
               <div className="mt-4 font-display text-lg font-semibold">{c.t}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* STORY */}
+      <section className="relative overflow-hidden border-y border-border/40">
+        <img
+          src={network}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/40" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 md:grid-cols-2 md:items-center">
+          <div className="animate-fade-up">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+              <HandHeart className="h-3 w-3 text-secondary" /> Every match is a story
+            </div>
+            <h2 className="mt-4 font-display text-4xl font-bold md:text-5xl">
+              Small actions.
+              <br />
+              <span className="gradient-text">Enormous ripples.</span>
+            </h2>
+            <p className="mt-4 max-w-lg text-muted-foreground">
+              Behind every skill offered is a classroom that gets a teacher, a shoreline that gets cleaner, a family that gets a warm meal. Impact Link turns everyday goodwill into visible, lasting change — one connection at a time.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild size="lg" className="bg-gradient-to-r from-primary to-primary-glow text-white transition-transform hover:scale-105">
+                <Link to="/auth" search={{ mode: "signup", role: "volunteer" }}>Start your story</Link>
+              </Button>
+              <Button asChild size="lg" variant="ghost">
+                <Link to="/how-it-works">See how it works</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="relative animate-fade-up" style={{ animationDelay: "150ms" }}>
+            <div className="absolute -inset-2 -z-10 rounded-3xl bg-gradient-to-br from-primary/30 to-secondary/20 blur-2xl" />
+            <img
+              src={community}
+              alt="Volunteers holding hands together at sunset"
+              width={1600}
+              height={900}
+              loading="lazy"
+              className="rounded-3xl border border-border/40 shadow-[var(--shadow-elegant)]"
+            />
+          </div>
         </div>
       </section>
 
