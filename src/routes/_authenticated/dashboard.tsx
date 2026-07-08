@@ -80,11 +80,14 @@ function DashboardHome() {
       const opportunities = opps.data ?? [];
       const applications = apps.data ?? [];
       const accepted = applications.filter((a: any) => a.status === "accepted").length;
+      const pending = applications.filter((a: any) => a.status === "pending").length;
+      const rejected = applications.filter((a: any) => a.status === "rejected").length;
       const rate = applications.length ? Math.round((accepted / applications.length) * 100) : 0;
       return {
         totalOpps: opportunities.length,
         openOpps: opportunities.filter((o) => o.status === "open").length,
         applicants: applications.length,
+        accepted, pending, rejected,
         selectionRate: rate,
       };
     },
