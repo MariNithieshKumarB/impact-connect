@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Compass, FileText, PlusCircle, Users, TrendingUp, Sparkles, Trophy } from "lucide-react";
 import { computeMatch } from "@/lib/matching";
-import { MatchBadge } from "@/components/MatchBadge";
+import { MatchBadge, MatchDetails } from "@/components/MatchBadge";
+import { categoryImage } from "@/lib/category-image";
+import { CheckCircle2, Clock, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardHome,
@@ -80,11 +82,14 @@ function DashboardHome() {
       const opportunities = opps.data ?? [];
       const applications = apps.data ?? [];
       const accepted = applications.filter((a: any) => a.status === "accepted").length;
+      const pending = applications.filter((a: any) => a.status === "pending").length;
+      const rejected = applications.filter((a: any) => a.status === "rejected").length;
       const rate = applications.length ? Math.round((accepted / applications.length) * 100) : 0;
       return {
         totalOpps: opportunities.length,
         openOpps: opportunities.filter((o) => o.status === "open").length,
         applicants: applications.length,
+        accepted, pending, rejected,
         selectionRate: rate,
       };
     },
@@ -113,22 +118,22 @@ function DashboardHome() {
           </div>
 
           {vol.data?.top && (
-            <Card className="glass border-primary/30">
-              <CardHeader>
-                <div className="flex items-center gap-2">
+            <Card className="glass overflow-hidden border-primary/30">
+              <div className="relative h-40 w-full overflow-hidden">
+                <img src={categoryImage(vol.data.top.o.title, vol.data.top.o.ngos?.focus_area, vol.data.top.o.description)} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+                <div className="absolute left-4 top-4 flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-primary" />
-                  <CardTitle>Top Match for You</CardTitle>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-primary">Top Match for You</span>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-display text-xl font-semibold">{vol.data.top.o.title}</h3>
-                    <p className="text-sm text-muted-foreground">{vol.data.top.o.ngos?.organization_name}</p>
-                  </div>
-                  <MatchBadge match={vol.data.top.match} />
+                <div className="absolute right-4 top-4"><MatchBadge match={vol.data.top.match} /></div>
+              </div>
+              <CardContent className="space-y-3 pt-4">
+                <div>
+                  <h3 className="font-display text-xl font-semibold">{vol.data.top.o.title}</h3>
+                  <p className="text-sm text-muted-foreground">{vol.data.top.o.ngos?.organization_name}</p>
                 </div>
-                <p className="text-sm text-muted-foreground">{vol.data.top.match.recommendation}</p>
+                <MatchDetails match={vol.data.top.match} />
                 <Button asChild className="bg-gradient-to-r from-primary to-primary-glow text-white">
                   <Link to="/opportunities">View & Apply</Link>
                 </Button>
@@ -194,6 +199,11 @@ function DashboardHome() {
             <StatCard label="Currently Open" value={ngo.data?.openOpps ?? 0} icon={Sparkles} />
             <StatCard label="Total Applicants" value={ngo.data?.applicants ?? 0} icon={Users} />
             <StatCard label="Selection Rate" value={`${ngo.data?.selectionRate ?? 0}%`} icon={TrendingUp} hint="Accepted / total" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard label="Pending Applications" value={ngo.data?.pending ?? 0} icon={Clock} />
+            <StatCard label="Accepted Volunteers" value={ngo.data?.accepted ?? 0} icon={CheckCircle2} />
+            <StatCard label="Rejected" value={ngo.data?.rejected ?? 0} icon={XCircle} />
           </div>
           <Card className="glass border-border/50">
             <CardContent className="flex flex-col items-start gap-4 p-8 md:flex-row md:items-center md:justify-between">
