@@ -177,31 +177,34 @@ function OpportunitiesList() {
           {enriched.map((o: any) => {
             const applied = myApps?.has(o.id);
             return (
-              <Card key={o.id} className="glass group border-border/50 transition-all hover:-translate-y-1 hover:border-primary/40">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-lg">{o.title}</CardTitle>
-                      <div className="mt-1 text-sm text-muted-foreground">{o.ngos?.organization_name}</div>
-                    </div>
-                    {o.ngos?.focus_area && <Badge variant="secondary" className="shrink-0">{o.ngos.focus_area}</Badge>}
-                  </div>
-                  {o.match && (
-                    <div className="pt-2"><MatchBadge match={o.match} compact /></div>
+              <Card key={o.id} className="glass group overflow-hidden border-border/50 transition-all hover:-translate-y-1 hover:border-primary/40">
+                <div className="relative h-36 w-full overflow-hidden">
+                  <img
+                    src={categoryImage(o.title, o.ngos?.focus_area, o.description)}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+                  {o.ngos?.focus_area && (
+                    <Badge variant="secondary" className="absolute left-3 top-3 backdrop-blur">{o.ngos.focus_area}</Badge>
                   )}
+                  {o.match && (
+                    <div className="absolute right-3 top-3"><MatchBadge match={o.match} compact /></div>
+                  )}
+                </div>
+                <CardHeader className="pb-2">
+                  <CardTitle className="truncate text-lg">{o.title}</CardTitle>
+                  <div className="text-sm text-muted-foreground">{o.ngos?.organization_name}</div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="line-clamp-3 text-sm text-muted-foreground">{o.description}</p>
+                <CardContent className="space-y-3">
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{o.description}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {(o.required_skills ?? []).slice(0, 5).map((s: string) => (
                       <Badge key={s} variant="outline" className="border-primary/30">{s}</Badge>
                     ))}
                   </div>
-                  {o.match && o.match.missingSkills.length > 0 && (
-                    <p className="text-xs text-amber-300/90">
-                      Skills to grow: {o.match.missingSkills.slice(0, 3).join(", ")}
-                    </p>
-                  )}
+                  {o.match && <MatchDetails match={o.match} />}
                   <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                     {o.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {o.location}</span>}
                     {o.deadline && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(o.deadline).toLocaleDateString()}</span>}
