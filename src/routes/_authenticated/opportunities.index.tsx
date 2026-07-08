@@ -12,7 +12,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AISuggestButton } from "@/components/AISuggestButton";
 import { computeMatch } from "@/lib/matching";
-import { MatchBadge } from "@/components/MatchBadge";
+import { MatchBadge, MatchDetails } from "@/components/MatchBadge";
+import { categoryImage } from "@/lib/category-image";
 
 export const Route = createFileRoute("/_authenticated/opportunities/")({
   component: OpportunitiesList,
