@@ -1,12 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PowerOff, Power } from "lucide-react";
+import { Trash2, PowerOff, Power, Users, PlusCircle } from "lucide-react";
 import { toast } from "sonner";
+import { categoryImage } from "@/lib/category-image";
 
 export const Route = createFileRoute("/_authenticated/opportunities/manage")({
   component: ManageOpportunities,
