@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +12,7 @@ import { computeMatch } from "@/lib/matching";
 import { MatchBadge, MatchDetails } from "@/components/MatchBadge";
 import { categoryImage } from "@/lib/category-image";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { ensureUserDemoData } from "@/lib/ensure-demo-data.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardHome,
@@ -32,6 +35,26 @@ function StatCard({ label, value, icon: Icon, hint }: { label: string; value: nu
 
 function DashboardHome() {
   const { data: profile } = useProfile();
+  const qc = useQueryClient();
+  const ensureDemo = useServerFn(ensureUserDemoData);
+  const seededRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profile?.id || seededRef.current === profile.id) return;
+    seededRef.current = profile.id;
+    ensureDemo()
+      .then((res: any) => {
+        if (res?.seeded) {
+          qc.invalidateQueries({ queryKey: ["vol-stats"] });
+          qc.invalidateQueries({ queryKey: ["ngo-stats"] });
+          qc.invalidateQueries({ queryKey: ["applicants"] });
+          qc.invalidateQueries({ queryKey: ["analytics"] });
+          qc.invalidateQueries({ queryKey: ["my-applications"] });
+        }
+      })
+      .catch(() => {});
+  }, [profile?.id, ensureDemo, qc]);
+
 
   const vol = useQuery({
     enabled: profile?.role === "volunteer",
