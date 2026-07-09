@@ -42,7 +42,7 @@ function DashboardHome() {
   useEffect(() => {
     if (!profile?.id || seededRef.current === profile.id) return;
     seededRef.current = profile.id;
-    ensureDemo({ data: undefined } as any)
+    ensureDemo()
       .then((res: any) => {
         if (res?.seeded) {
           qc.invalidateQueries({ queryKey: ["vol-stats"] });
