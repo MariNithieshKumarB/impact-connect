@@ -35,6 +35,26 @@ function StatCard({ label, value, icon: Icon, hint }: { label: string; value: nu
 
 function DashboardHome() {
   const { data: profile } = useProfile();
+  const qc = useQueryClient();
+  const ensureDemo = useServerFn(ensureUserDemoData);
+  const seededRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profile?.id || seededRef.current === profile.id) return;
+    seededRef.current = profile.id;
+    ensureDemo({ data: undefined } as any)
+      .then((res: any) => {
+        if (res?.seeded) {
+          qc.invalidateQueries({ queryKey: ["vol-stats"] });
+          qc.invalidateQueries({ queryKey: ["ngo-stats"] });
+          qc.invalidateQueries({ queryKey: ["applicants"] });
+          qc.invalidateQueries({ queryKey: ["analytics"] });
+          qc.invalidateQueries({ queryKey: ["my-applications"] });
+        }
+      })
+      .catch(() => {});
+  }, [profile?.id, ensureDemo, qc]);
+
 
   const vol = useQuery({
     enabled: profile?.role === "volunteer",
