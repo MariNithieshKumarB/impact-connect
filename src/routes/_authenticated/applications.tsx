@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
-import { Calendar, MapPin, Compass } from "lucide-react";
+import { Calendar, MapPin, Compass, CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
 import { categoryImage } from "@/lib/category-image";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/applications")({
   component: MyApplications,
@@ -127,9 +128,12 @@ function MyApplications() {
                         <Badge variant="outline" className={statusStyles[a.status] ?? ""}>{a.status}</Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex flex-wrap items-center gap-4 pt-0 text-xs text-muted-foreground">
-                      {a.opportunities?.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {a.opportunities.location}</span>}
-                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Applied {new Date(a.created_at).toLocaleDateString()}</span>
+                    <CardContent className="space-y-3 pt-0">
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                        {a.opportunities?.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {a.opportunities.location}</span>}
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Applied {new Date(a.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <Timeline status={a.status} appliedAt={a.created_at} updatedAt={a.updated_at} />
                     </CardContent>
                   </div>
                 </div>
@@ -137,6 +141,44 @@ function MyApplications() {
             ))}
           </div>
         )}
+    </div>
+  );
+}
+
+function Timeline({ status, appliedAt, updatedAt }: { status: string; appliedAt: string; updatedAt: string }) {
+  const decided = status === "accepted" || status === "rejected" || status === "completed";
+  const reviewing = status !== "pending";
+  const steps = [
+    { key: "submitted", label: "Submitted", date: appliedAt, done: true, icon: CheckCircle2, tone: "text-emerald-400" },
+    { key: "review", label: "Under Review", date: reviewing ? updatedAt : null, done: reviewing, icon: reviewing ? CheckCircle2 : Clock, tone: reviewing ? "text-emerald-400" : "text-amber-300" },
+    {
+      key: "decision",
+      label: status === "rejected" ? "Not Selected" : status === "accepted" ? "Accepted" : status === "completed" ? "Completed" : "Decision",
+      date: decided ? updatedAt : null,
+      done: decided,
+      icon: status === "rejected" ? XCircle : decided ? CheckCircle2 : Circle,
+      tone: status === "rejected" ? "text-destructive" : decided ? "text-emerald-400" : "text-muted-foreground",
+    },
+  ];
+  return (
+    <div className="rounded-lg border border-border/40 bg-background/40 p-3">
+      <div className="flex items-center justify-between gap-2">
+        {steps.map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.key} className="flex flex-1 items-center gap-2">
+              <div className="flex flex-col items-center">
+                <Icon className={cn("h-4 w-4", s.tone)} />
+                <div className="mt-1 text-[10px] font-medium">{s.label}</div>
+                {s.date && <div className="text-[9px] text-muted-foreground">{new Date(s.date).toLocaleDateString()}</div>}
+              </div>
+              {i < steps.length - 1 && (
+                <div className={cn("h-px flex-1", steps[i + 1].done ? "bg-emerald-400/60" : "bg-border/60")} />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
