@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
-import { Calendar, MapPin, Compass } from "lucide-react";
+import { Calendar, MapPin, Compass, CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
 import { categoryImage } from "@/lib/category-image";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/applications")({
   component: MyApplications,
