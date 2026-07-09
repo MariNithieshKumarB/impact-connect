@@ -128,9 +128,12 @@ function MyApplications() {
                         <Badge variant="outline" className={statusStyles[a.status] ?? ""}>{a.status}</Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex flex-wrap items-center gap-4 pt-0 text-xs text-muted-foreground">
-                      {a.opportunities?.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {a.opportunities.location}</span>}
-                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Applied {new Date(a.created_at).toLocaleDateString()}</span>
+                    <CardContent className="space-y-3 pt-0">
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                        {a.opportunities?.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {a.opportunities.location}</span>}
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Applied {new Date(a.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <Timeline status={a.status} appliedAt={a.created_at} updatedAt={a.updated_at} />
                     </CardContent>
                   </div>
                 </div>
