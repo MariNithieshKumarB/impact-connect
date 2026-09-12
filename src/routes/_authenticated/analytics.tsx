@@ -181,7 +181,7 @@ function Analytics() {
             </p>
           </div>
           <Button asChild variant="outline">
-            <Link to="/applicants">Review applicants</Link>
+            <Link to="/applicants" search={{ opportunity: undefined }}>Review applicants</Link>
           </Button>
         </div>
       </div>
