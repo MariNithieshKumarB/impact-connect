@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationBell } from "./NotificationBell";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 const VOLUNTEER_ITEMS = [
   { title: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -87,6 +89,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading } = useProfile();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  useRealtimeSync();
 
   const signOut = async () => {
     await qc.cancelQueries();
