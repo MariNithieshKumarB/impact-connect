@@ -101,7 +101,7 @@ function Applicants() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {oppFilter && <Button asChild variant="outline" size="sm"><Link to="/applicants">Clear filter</Link></Button>}
+          {oppFilter && <Button asChild variant="outline" size="sm"><Link to="/applicants" search={{ opportunity: undefined }}>Clear filter</Link></Button>}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
