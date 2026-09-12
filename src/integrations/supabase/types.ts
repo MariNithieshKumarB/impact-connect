@@ -238,7 +238,13 @@ export type Database = {
       }
     }
     Enums: {
-      application_status: "pending" | "accepted" | "rejected" | "withdrawn"
+      application_status:
+        | "pending"
+        | "accepted"
+        | "rejected"
+        | "withdrawn"
+        | "shortlisted"
+        | "completed"
       opportunity_status: "open" | "closed" | "draft"
       user_role: "volunteer" | "ngo"
     }
@@ -368,7 +374,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      application_status: ["pending", "accepted", "rejected", "withdrawn"],
+      application_status: [
+        "pending",
+        "accepted",
+        "rejected",
+        "withdrawn",
+        "shortlisted",
+        "completed",
+      ],
       opportunity_status: ["open", "closed", "draft"],
       user_role: ["volunteer", "ngo"],
     },
