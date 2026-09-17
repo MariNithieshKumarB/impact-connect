@@ -55,17 +55,55 @@ function OpportunitiesList() {
     enabled: !!profile && profile.role === "volunteer",
     queryKey: ["my-app-ids", profile?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("applications").select("opportunity_id").eq("volunteer_id", profile!.id);
-      return new Set((data ?? []).map((a) => a.opportunity_id));
+      const { data } = await supabase.from("applications").select("opportunity_id, status").eq("volunteer_id", profile!.id);
+      return new Map((data ?? []).map((a) => [a.opportunity_id, a.status]));
     },
   });
 
+  const { data: saved } = useQuery({
+    enabled: !!profile && profile.role === "volunteer",
+    queryKey: ["saved-opps", profile?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("saved_opportunities").select("opportunity_id").eq("volunteer_id", profile!.id);
+      return new Set((data ?? []).map((s) => s.opportunity_id));
+    },
+  });
+
+  const [applying, setApplying] = useState<string | null>(null);
+
+  const friendly = (msg: string) => {
+    if (msg.includes("applications_unique_volunteer_opportunity") || msg.includes("duplicate key"))
+      return "You've already applied to this opportunity.";
+    if (msg.includes("closed for applications")) return "This opportunity is closed for applications.";
+    if (msg.includes("deadline")) return "The deadline for this opportunity has passed.";
+    if (msg.includes("no longer exists")) return "This opportunity is no longer available.";
+    return msg;
+  };
+
   const apply = async (id: string) => {
     if (!profile) return;
+    setApplying(id);
     const { error } = await supabase.from("applications").insert({ opportunity_id: id, volunteer_id: profile.id });
-    if (error) return toast.error(error.message);
-    toast.success("Application sent!");
+    setApplying(null);
+    if (error) return toast.error(friendly(error.message));
+    toast.success("Application sent — the organization has been notified.");
     qc.invalidateQueries({ queryKey: ["my-app-ids"] });
+    qc.invalidateQueries({ queryKey: ["my-apps"] });
+    qc.invalidateQueries({ queryKey: ["vol-stats"] });
+  };
+
+  const toggleSave = async (id: string) => {
+    if (!profile) return;
+    if (saved?.has(id)) {
+      const { error } = await supabase.from("saved_opportunities").delete().eq("volunteer_id", profile.id).eq("opportunity_id", id);
+      if (error) return toast.error(error.message);
+      toast.success("Removed from saved");
+    } else {
+      const { error } = await supabase.from("saved_opportunities").insert({ volunteer_id: profile.id, opportunity_id: id });
+      if (error) return toast.error(error.message);
+      toast.success("Saved for later");
+    }
+    qc.invalidateQueries({ queryKey: ["saved-opps"] });
   };
 
   const causes = useMemo(() => {
