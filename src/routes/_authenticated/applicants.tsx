@@ -191,17 +191,48 @@ function Applicants() {
                     ))}
                   </div>
                   {a.volunteers?.availability && <p className="text-xs text-muted-foreground">Availability: {a.volunteers.availability}</p>}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button size="sm" disabled={a.status === "accepted"} onClick={() => update(a.id, "accepted")} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50">
-                      <Check className="mr-1 h-3 w-3" /> Accept
-                    </Button>
-                    <Button size="sm" disabled={a.status === "pending"} variant="outline" onClick={() => update(a.id, "pending")}>
-                      <Clock className="mr-1 h-3 w-3" /> Pending
-                    </Button>
-                    <Button size="sm" disabled={a.status === "rejected"} variant="outline" onClick={() => update(a.id, "rejected")} className="text-destructive hover:text-destructive disabled:opacity-50">
-                      <X className="mr-1 h-3 w-3" /> Reject
-                    </Button>
-                  </div>
+
+                  {a.impact_submissions?.[0] && (
+                    <div className="rounded-lg border border-secondary/40 bg-secondary/5 p-3 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium text-secondary">
+                          Impact report · {a.impact_submissions[0].hours_contributed} hours · {a.impact_submissions[0].people_reached} people reached
+                        </span>
+                        {a.impact_submissions[0].verified ? (
+                          <Badge variant="outline" className="border-emerald-400/50 text-emerald-300">verified</Badge>
+                        ) : (
+                          <Button size="sm" variant="outline" className="h-7" onClick={() => verifyImpact(a.impact_submissions[0].id)}>
+                            <ShieldCheck className="mr-1 h-3 w-3" /> Verify
+                          </Button>
+                        )}
+                      </div>
+                      {a.impact_submissions[0].summary && <p className="mt-1 text-muted-foreground">{a.impact_submissions[0].summary}</p>}
+                    </div>
+                  )}
+
+                  {a.status === "withdrawn" ? (
+                    <p className="text-xs text-muted-foreground">This volunteer withdrew their application.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button size="sm" disabled={a.status === "shortlisted"} variant="outline" onClick={() => update(a.id, "shortlisted")} className="border-primary/40 text-primary disabled:opacity-50">
+                        <Star className="mr-1 h-3 w-3" /> Shortlist
+                      </Button>
+                      <Button size="sm" disabled={a.status === "accepted"} onClick={() => update(a.id, "accepted")} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50">
+                        <Check className="mr-1 h-3 w-3" /> Accept
+                      </Button>
+                      <Button size="sm" disabled={a.status === "pending"} variant="outline" onClick={() => update(a.id, "pending")}>
+                        <Clock className="mr-1 h-3 w-3" /> Pending
+                      </Button>
+                      <Button size="sm" disabled={a.status === "rejected"} variant="outline" onClick={() => update(a.id, "rejected")} className="text-destructive hover:text-destructive disabled:opacity-50">
+                        <X className="mr-1 h-3 w-3" /> Reject
+                      </Button>
+                      {a.status === "accepted" && (
+                        <Button size="sm" variant="outline" onClick={() => update(a.id, "completed")}>
+                          <BadgeCheck className="mr-1 h-3 w-3" /> Mark complete
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
