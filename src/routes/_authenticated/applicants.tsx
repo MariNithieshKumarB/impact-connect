@@ -33,7 +33,7 @@ function Applicants() {
       const { data, error } = await supabase
         .from("applications")
         .select(
-          "*, opportunities!inner(id, title, ngo_id, required_skills, location, description), volunteers(profile_id, skills, interests, availability, experience, preferred_location), profiles:volunteer_id(full_name, avatar, location)",
+          "*, opportunities!inner(id, title, ngo_id, required_skills, location, description), volunteers(profile_id, skills, interests, availability, experience, preferred_location), profiles:volunteer_id(full_name, avatar, location), impact_submissions(id, hours_contributed, people_reached, summary, verified)",
         )
         .eq("opportunities.ngo_id", profile!.id)
         .order("created_at", { ascending: false });
@@ -79,12 +79,20 @@ function Applicants() {
     return base;
   }, [data, oppFilter]);
 
-  const update = async (id: string, status: "accepted" | "rejected" | "pending") => {
+  const update = async (id: string, status: "accepted" | "rejected" | "pending" | "shortlisted" | "completed") => {
     const { error } = await supabase.from("applications").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success(`Application ${status === "pending" ? "reset to pending" : status}`);
+    toast.success(`Application ${status === "pending" ? "reset to pending" : status} — the volunteer has been notified.`);
     qc.invalidateQueries({ queryKey: ["applicants"] });
     qc.invalidateQueries({ queryKey: ["ngo-stats"] });
+    qc.invalidateQueries({ queryKey: ["analytics"] });
+  };
+
+  const verifyImpact = async (impactId: string) => {
+    const { error } = await supabase.from("impact_submissions").update({ verified: true }).eq("id", impactId);
+    if (error) return toast.error(error.message);
+    toast.success("Impact report verified");
+    qc.invalidateQueries({ queryKey: ["applicants"] });
     qc.invalidateQueries({ queryKey: ["analytics"] });
   };
 
@@ -107,8 +115,11 @@ function Applicants() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="shortlisted">Shortlisted</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="withdrawn">Withdrawn</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -180,17 +191,48 @@ function Applicants() {
                     ))}
                   </div>
                   {a.volunteers?.availability && <p className="text-xs text-muted-foreground">Availability: {a.volunteers.availability}</p>}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button size="sm" disabled={a.status === "accepted"} onClick={() => update(a.id, "accepted")} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50">
-                      <Check className="mr-1 h-3 w-3" /> Accept
-                    </Button>
-                    <Button size="sm" disabled={a.status === "pending"} variant="outline" onClick={() => update(a.id, "pending")}>
-                      <Clock className="mr-1 h-3 w-3" /> Pending
-                    </Button>
-                    <Button size="sm" disabled={a.status === "rejected"} variant="outline" onClick={() => update(a.id, "rejected")} className="text-destructive hover:text-destructive disabled:opacity-50">
-                      <X className="mr-1 h-3 w-3" /> Reject
-                    </Button>
-                  </div>
+
+                  {a.impact_submissions?.[0] && (
+                    <div className="rounded-lg border border-secondary/40 bg-secondary/5 p-3 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium text-secondary">
+                          Impact report · {a.impact_submissions[0].hours_contributed} hours · {a.impact_submissions[0].people_reached} people reached
+                        </span>
+                        {a.impact_submissions[0].verified ? (
+                          <Badge variant="outline" className="border-emerald-400/50 text-emerald-300">verified</Badge>
+                        ) : (
+                          <Button size="sm" variant="outline" className="h-7" onClick={() => verifyImpact(a.impact_submissions[0].id)}>
+                            <ShieldCheck className="mr-1 h-3 w-3" /> Verify
+                          </Button>
+                        )}
+                      </div>
+                      {a.impact_submissions[0].summary && <p className="mt-1 text-muted-foreground">{a.impact_submissions[0].summary}</p>}
+                    </div>
+                  )}
+
+                  {a.status === "withdrawn" ? (
+                    <p className="text-xs text-muted-foreground">This volunteer withdrew their application.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button size="sm" disabled={a.status === "shortlisted"} variant="outline" onClick={() => update(a.id, "shortlisted")} className="border-primary/40 text-primary disabled:opacity-50">
+                        <Star className="mr-1 h-3 w-3" /> Shortlist
+                      </Button>
+                      <Button size="sm" disabled={a.status === "accepted"} onClick={() => update(a.id, "accepted")} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 disabled:opacity-50">
+                        <Check className="mr-1 h-3 w-3" /> Accept
+                      </Button>
+                      <Button size="sm" disabled={a.status === "pending"} variant="outline" onClick={() => update(a.id, "pending")}>
+                        <Clock className="mr-1 h-3 w-3" /> Pending
+                      </Button>
+                      <Button size="sm" disabled={a.status === "rejected"} variant="outline" onClick={() => update(a.id, "rejected")} className="text-destructive hover:text-destructive disabled:opacity-50">
+                        <X className="mr-1 h-3 w-3" /> Reject
+                      </Button>
+                      {a.status === "accepted" && (
+                        <Button size="sm" variant="outline" onClick={() => update(a.id, "completed")}>
+                          <BadgeCheck className="mr-1 h-3 w-3" /> Mark complete
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

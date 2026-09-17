@@ -1,13 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
-import { Calendar, MapPin, Compass, CheckCircle2, Circle, Clock, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Calendar, MapPin, Compass, CheckCircle2, Circle, Clock, XCircle, Undo2, Sprout, History } from "lucide-react";
 import { categoryImage } from "@/lib/category-image";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/applications")({
 
 const statusStyles: Record<string, string> = {
   pending: "border-amber-400/50 text-amber-300",
+  shortlisted: "border-primary/50 text-primary",
   accepted: "border-emerald-400/50 text-emerald-300",
   rejected: "border-destructive/50 text-destructive",
   completed: "border-sky-400/50 text-sky-300",
@@ -25,6 +31,7 @@ const statusStyles: Record<string, string> = {
 
 function MyApplications() {
   const { data: profile } = useProfile();
+  const qc = useQueryClient();
   const [filter, setFilter] = useState("all");
   const { data, isLoading } = useQuery({
     enabled: !!profile,
@@ -32,13 +39,23 @@ function MyApplications() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, opportunities(title, location, description, ngos(organization_name, focus_area))")
+        .select("*, opportunities(title, location, description, ngos(organization_name, focus_area)), application_status_history(old_status, new_status, created_at), impact_submissions(id, hours_contributed, people_reached, summary, verified)")
         .eq("volunteer_id", profile!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  const withdraw = async (id: string) => {
+    if (!confirm("Withdraw this application? The organization will be notified.")) return;
+    const { error } = await supabase.from("applications").update({ status: "withdrawn" }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Application withdrawn");
+    qc.invalidateQueries({ queryKey: ["my-apps"] });
+    qc.invalidateQueries({ queryKey: ["my-app-ids"] });
+    qc.invalidateQueries({ queryKey: ["vol-stats"] });
+  };
 
   const counts = useMemo(() => {
     const c = { total: 0, pending: 0, accepted: 0, rejected: 0 };
@@ -67,9 +84,11 @@ function MyApplications() {
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="shortlisted">Shortlisted</SelectItem>
             <SelectItem value="accepted">Accepted</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="withdrawn">Withdrawn</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -134,6 +153,47 @@ function MyApplications() {
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Applied {new Date(a.created_at).toLocaleDateString()}</span>
                       </div>
                       <Timeline status={a.status} appliedAt={a.created_at} updatedAt={a.updated_at} />
+
+                      {!!a.application_status_history?.length && (
+                        <details className="rounded-lg border border-border/40 bg-background/40 p-3">
+                          <summary className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <History className="h-3 w-3 text-primary" /> Status history ({a.application_status_history.length})
+                          </summary>
+                          <ul className="mt-2 space-y-1">
+                            {[...a.application_status_history]
+                              .sort((x: any, y: any) => +new Date(x.created_at) - +new Date(y.created_at))
+                              .map((h: any, i: number) => (
+                                <li key={i} className="text-xs text-muted-foreground">
+                                  {new Date(h.created_at).toLocaleString()} —{" "}
+                                  {h.old_status ? `${h.old_status} → ${h.new_status}` : `submitted as ${h.new_status}`}
+                                </li>
+                              ))}
+                          </ul>
+                        </details>
+                      )}
+
+                      {a.impact_submissions?.[0] && (
+                        <div className="rounded-lg border border-secondary/40 bg-secondary/5 p-3 text-xs">
+                          <div className="font-medium text-secondary">
+                            Impact reported {a.impact_submissions[0].verified ? "· verified by the organization" : "· awaiting verification"}
+                          </div>
+                          <div className="mt-1 text-muted-foreground">
+                            {a.impact_submissions[0].hours_contributed} hours · {a.impact_submissions[0].people_reached} people reached
+                          </div>
+                          {a.impact_submissions[0].summary && <p className="mt-1 text-muted-foreground">{a.impact_submissions[0].summary}</p>}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {(a.status === "pending" || a.status === "shortlisted") && (
+                          <Button variant="outline" size="sm" onClick={() => withdraw(a.id)}>
+                            <Undo2 className="mr-1 h-3.5 w-3.5" /> Withdraw
+                          </Button>
+                        )}
+                        {(a.status === "accepted" || a.status === "completed") && !a.impact_submissions?.[0] && (
+                          <ImpactDialog applicationId={a.id} volunteerId={a.volunteer_id} />
+                        )}
+                      </div>
                     </CardContent>
                   </div>
                 </div>
@@ -144,6 +204,65 @@ function MyApplications() {
     </div>
   );
 }
+
+function ImpactDialog({ applicationId, volunteerId }: { applicationId: string; volunteerId: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [hours, setHours] = useState("");
+  const [people, setPeople] = useState("");
+  const [summary, setSummary] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("impact_submissions").insert({
+      application_id: applicationId,
+      volunteer_id: volunteerId,
+      hours_contributed: Number(hours) || 0,
+      people_reached: Number(people) || 0,
+      summary,
+    });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Impact report submitted");
+    setOpen(false);
+    qc.invalidateQueries({ queryKey: ["my-apps"] });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+          <Sprout className="mr-1 h-3.5 w-3.5" /> Report impact
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Report your impact</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="hours">Hours contributed</Label>
+            <Input id="hours" type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="e.g. 12" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="people">People reached</Label>
+            <Input id="people" type="number" min="0" value={people} onChange={(e) => setPeople(e.target.value)} placeholder="e.g. 40" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="summary">What did you do?</Label>
+            <Textarea id="summary" value={summary} onChange={(e) => setSummary(e.target.value)} rows={4} placeholder="Short summary of your contribution…" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={saving} className="bg-gradient-to-r from-primary to-primary-glow text-white">
+            {saving ? "Submitting…" : "Submit report"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 
 function Timeline({ status, appliedAt, updatedAt }: { status: string; appliedAt: string; updatedAt: string }) {
   const decided = status === "accepted" || status === "rejected" || status === "completed";

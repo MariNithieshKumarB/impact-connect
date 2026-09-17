@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Calendar, Users, Search, SlidersHorizontal } from "lucide-react";
+import { MapPin, Calendar, Users, Search, SlidersHorizontal, Bookmark, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AISuggestButton } from "@/components/AISuggestButton";
@@ -28,6 +28,7 @@ function OpportunitiesList() {
   const [cause, setCause] = useState<string>("all");
   const [availability, setAvailability] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"match" | "recent">("match");
+  const [savedOnly, setSavedOnly] = useState(false);
 
   const { data: opps, isLoading } = useQuery({
     queryKey: ["all-opps"],
@@ -55,17 +56,55 @@ function OpportunitiesList() {
     enabled: !!profile && profile.role === "volunteer",
     queryKey: ["my-app-ids", profile?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("applications").select("opportunity_id").eq("volunteer_id", profile!.id);
-      return new Set((data ?? []).map((a) => a.opportunity_id));
+      const { data } = await supabase.from("applications").select("opportunity_id, status").eq("volunteer_id", profile!.id);
+      return new Map((data ?? []).map((a) => [a.opportunity_id, a.status]));
     },
   });
 
+  const { data: saved } = useQuery({
+    enabled: !!profile && profile.role === "volunteer",
+    queryKey: ["saved-opps", profile?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("saved_opportunities").select("opportunity_id").eq("volunteer_id", profile!.id);
+      return new Set((data ?? []).map((s) => s.opportunity_id));
+    },
+  });
+
+  const [applying, setApplying] = useState<string | null>(null);
+
+  const friendly = (msg: string) => {
+    if (msg.includes("applications_unique_volunteer_opportunity") || msg.includes("duplicate key"))
+      return "You've already applied to this opportunity.";
+    if (msg.includes("closed for applications")) return "This opportunity is closed for applications.";
+    if (msg.includes("deadline")) return "The deadline for this opportunity has passed.";
+    if (msg.includes("no longer exists")) return "This opportunity is no longer available.";
+    return msg;
+  };
+
   const apply = async (id: string) => {
     if (!profile) return;
+    setApplying(id);
     const { error } = await supabase.from("applications").insert({ opportunity_id: id, volunteer_id: profile.id });
-    if (error) return toast.error(error.message);
-    toast.success("Application sent!");
+    setApplying(null);
+    if (error) return toast.error(friendly(error.message));
+    toast.success("Application sent — the organization has been notified.");
     qc.invalidateQueries({ queryKey: ["my-app-ids"] });
+    qc.invalidateQueries({ queryKey: ["my-apps"] });
+    qc.invalidateQueries({ queryKey: ["vol-stats"] });
+  };
+
+  const toggleSave = async (id: string) => {
+    if (!profile) return;
+    if (saved?.has(id)) {
+      const { error } = await supabase.from("saved_opportunities").delete().eq("volunteer_id", profile.id).eq("opportunity_id", id);
+      if (error) return toast.error(error.message);
+      toast.success("Removed from saved");
+    } else {
+      const { error } = await supabase.from("saved_opportunities").insert({ volunteer_id: profile.id, opportunity_id: id });
+      if (error) return toast.error(error.message);
+      toast.success("Saved for later");
+    }
+    qc.invalidateQueries({ queryKey: ["saved-opps"] });
   };
 
   const causes = useMemo(() => {
@@ -84,7 +123,8 @@ function OpportunitiesList() {
         const matchesSkill = !sk || (o.required_skills ?? []).some((r: string) => r.toLowerCase().includes(sk));
         const matchesLoc = !lo || (o.location ?? "").toLowerCase().includes(lo);
         const matchesCause = cause === "all" || o.ngos?.focus_area === cause;
-        return matchesQ && matchesSkill && matchesLoc && matchesCause;
+        const matchesSaved = !savedOnly || !!saved?.has(o.id);
+        return matchesQ && matchesSkill && matchesLoc && matchesCause && matchesSaved;
       })
       .map((o: any) => ({
         ...o,
@@ -110,7 +150,7 @@ function OpportunitiesList() {
       list.sort((a: any, b: any) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
     }
     return list;
-  }, [opps, q, skill, loc, cause, availability, sortBy, profile, me]);
+  }, [opps, q, skill, loc, cause, availability, sortBy, profile, me, savedOnly, saved]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -165,6 +205,20 @@ function OpportunitiesList() {
               </SelectContent>
             </Select>
           </div>
+          {profile?.role === "volunteer" && (
+            <div className="md:col-span-5">
+              <Button
+                type="button"
+                variant={savedOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSavedOnly((v) => !v)}
+                aria-pressed={savedOnly}
+              >
+                <Bookmark className={savedOnly ? "mr-1.5 h-3.5 w-3.5 fill-current" : "mr-1.5 h-3.5 w-3.5"} />
+                {savedOnly ? "Showing saved only" : `Saved (${saved?.size ?? 0})`}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -175,7 +229,8 @@ function OpportunitiesList() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {enriched.map((o: any) => {
-            const applied = myApps?.has(o.id);
+            const appStatus = myApps?.get(o.id);
+            const isSaved = !!saved?.has(o.id);
             return (
               <Card key={o.id} className="glass group overflow-hidden border-border/50 transition-all hover:-translate-y-1 hover:border-primary/40">
                 <div className="relative h-36 w-full overflow-hidden">
@@ -211,13 +266,27 @@ function OpportunitiesList() {
                     <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {o.volunteers_needed} needed</span>
                   </div>
                   {profile?.role === "volunteer" && (
-                    <Button
-                      onClick={() => apply(o.id)}
-                      disabled={applied}
-                      className="w-full bg-gradient-to-r from-primary to-primary-glow text-white disabled:opacity-60"
-                    >
-                      {applied ? "Applied ✓" : "Apply Now"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => apply(o.id)}
+                        disabled={!!appStatus || applying === o.id}
+                        className="flex-1 bg-gradient-to-r from-primary to-primary-glow text-white disabled:opacity-60"
+                      >
+                        {applying === o.id ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying…</>
+                        ) : appStatus === "withdrawn" ? "Withdrawn"
+                          : appStatus ? `Applied · ${appStatus}`
+                          : "Apply Now"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label={isSaved ? "Remove from saved" : "Save for later"}
+                        onClick={() => toggleSave(o.id)}
+                      >
+                        <Bookmark className={isSaved ? "h-4 w-4 fill-current text-primary" : "h-4 w-4"} />
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
