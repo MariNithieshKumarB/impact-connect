@@ -28,6 +28,7 @@ function OpportunitiesList() {
   const [cause, setCause] = useState<string>("all");
   const [availability, setAvailability] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"match" | "recent">("match");
+  const [savedOnly, setSavedOnly] = useState(false);
 
   const { data: opps, isLoading } = useQuery({
     queryKey: ["all-opps"],
