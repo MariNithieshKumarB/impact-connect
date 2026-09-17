@@ -122,7 +122,8 @@ function OpportunitiesList() {
         const matchesSkill = !sk || (o.required_skills ?? []).some((r: string) => r.toLowerCase().includes(sk));
         const matchesLoc = !lo || (o.location ?? "").toLowerCase().includes(lo);
         const matchesCause = cause === "all" || o.ngos?.focus_area === cause;
-        return matchesQ && matchesSkill && matchesLoc && matchesCause;
+        const matchesSaved = !savedOnly || !!saved?.has(o.id);
+        return matchesQ && matchesSkill && matchesLoc && matchesCause && matchesSaved;
       })
       .map((o: any) => ({
         ...o,
