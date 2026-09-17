@@ -150,7 +150,7 @@ function OpportunitiesList() {
       list.sort((a: any, b: any) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
     }
     return list;
-  }, [opps, q, skill, loc, cause, availability, sortBy, profile, me]);
+  }, [opps, q, skill, loc, cause, availability, sortBy, profile, me, savedOnly, saved]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
