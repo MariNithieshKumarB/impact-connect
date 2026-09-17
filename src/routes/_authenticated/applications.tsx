@@ -202,6 +202,65 @@ function MyApplications() {
   );
 }
 
+function ImpactDialog({ applicationId, volunteerId }: { applicationId: string; volunteerId: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [hours, setHours] = useState("");
+  const [people, setPeople] = useState("");
+  const [summary, setSummary] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("impact_submissions").insert({
+      application_id: applicationId,
+      volunteer_id: volunteerId,
+      hours_contributed: Number(hours) || 0,
+      people_reached: Number(people) || 0,
+      summary,
+    });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Impact report submitted");
+    setOpen(false);
+    qc.invalidateQueries({ queryKey: ["my-apps"] });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+          <Sprout className="mr-1 h-3.5 w-3.5" /> Report impact
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Report your impact</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="hours">Hours contributed</Label>
+            <Input id="hours" type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="e.g. 12" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="people">People reached</Label>
+            <Input id="people" type="number" min="0" value={people} onChange={(e) => setPeople(e.target.value)} placeholder="e.g. 40" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="summary">What did you do?</Label>
+            <Textarea id="summary" value={summary} onChange={(e) => setSummary(e.target.value)} rows={4} placeholder="Short summary of your contribution…" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={saving} className="bg-gradient-to-r from-primary to-primary-glow text-white">
+            {saving ? "Submitting…" : "Submit report"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+
 function Timeline({ status, appliedAt, updatedAt }: { status: string; appliedAt: string; updatedAt: string }) {
   const decided = status === "accepted" || status === "rejected" || status === "completed";
   const reviewing = status !== "pending";
