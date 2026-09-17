@@ -30,6 +30,7 @@ const statusStyles: Record<string, string> = {
 
 function MyApplications() {
   const { data: profile } = useProfile();
+  const qc = useQueryClient();
   const [filter, setFilter] = useState("all");
   const { data, isLoading } = useQuery({
     enabled: !!profile,
@@ -37,13 +38,23 @@ function MyApplications() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, opportunities(title, location, description, ngos(organization_name, focus_area))")
+        .select("*, opportunities(title, location, description, ngos(organization_name, focus_area)), application_status_history(old_status, new_status, created_at), impact_submissions(id, hours_contributed, people_reached, summary, verified)")
         .eq("volunteer_id", profile!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  const withdraw = async (id: string) => {
+    if (!confirm("Withdraw this application? The organization will be notified.")) return;
+    const { error } = await supabase.from("applications").update({ status: "withdrawn" }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Application withdrawn");
+    qc.invalidateQueries({ queryKey: ["my-apps"] });
+    qc.invalidateQueries({ queryKey: ["my-app-ids"] });
+    qc.invalidateQueries({ queryKey: ["vol-stats"] });
+  };
 
   const counts = useMemo(() => {
     const c = { total: 0, pending: 0, accepted: 0, rejected: 0 };
