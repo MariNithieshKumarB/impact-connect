@@ -229,7 +229,8 @@ function OpportunitiesList() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {enriched.map((o: any) => {
-            const applied = myApps?.has(o.id);
+            const appStatus = myApps?.get(o.id);
+            const isSaved = !!saved?.has(o.id);
             return (
               <Card key={o.id} className="glass group overflow-hidden border-border/50 transition-all hover:-translate-y-1 hover:border-primary/40">
                 <div className="relative h-36 w-full overflow-hidden">
@@ -265,13 +266,27 @@ function OpportunitiesList() {
                     <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {o.volunteers_needed} needed</span>
                   </div>
                   {profile?.role === "volunteer" && (
-                    <Button
-                      onClick={() => apply(o.id)}
-                      disabled={applied}
-                      className="w-full bg-gradient-to-r from-primary to-primary-glow text-white disabled:opacity-60"
-                    >
-                      {applied ? "Applied ✓" : "Apply Now"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => apply(o.id)}
+                        disabled={!!appStatus || applying === o.id}
+                        className="flex-1 bg-gradient-to-r from-primary to-primary-glow text-white disabled:opacity-60"
+                      >
+                        {applying === o.id ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying…</>
+                        ) : appStatus === "withdrawn" ? "Withdrawn"
+                          : appStatus ? `Applied · ${appStatus}`
+                          : "Apply Now"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label={isSaved ? "Remove from saved" : "Save for later"}
+                        onClick={() => toggleSave(o.id)}
+                      >
+                        <Bookmark className={isSaved ? "h-4 w-4 fill-current text-primary" : "h-4 w-4"} />
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
