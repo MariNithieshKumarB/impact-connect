@@ -83,9 +83,11 @@ function MyApplications() {
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="shortlisted">Shortlisted</SelectItem>
             <SelectItem value="accepted">Accepted</SelectItem>
             <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="withdrawn">Withdrawn</SelectItem>
           </SelectContent>
         </Select>
       </div>
