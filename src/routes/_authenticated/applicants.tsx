@@ -79,12 +79,20 @@ function Applicants() {
     return base;
   }, [data, oppFilter]);
 
-  const update = async (id: string, status: "accepted" | "rejected" | "pending") => {
+  const update = async (id: string, status: "accepted" | "rejected" | "pending" | "shortlisted" | "completed") => {
     const { error } = await supabase.from("applications").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success(`Application ${status === "pending" ? "reset to pending" : status}`);
+    toast.success(`Application ${status === "pending" ? "reset to pending" : status} — the volunteer has been notified.`);
     qc.invalidateQueries({ queryKey: ["applicants"] });
     qc.invalidateQueries({ queryKey: ["ngo-stats"] });
+    qc.invalidateQueries({ queryKey: ["analytics"] });
+  };
+
+  const verifyImpact = async (impactId: string) => {
+    const { error } = await supabase.from("impact_submissions").update({ verified: true }).eq("id", impactId);
+    if (error) return toast.error(error.message);
+    toast.success("Impact report verified");
+    qc.invalidateQueries({ queryKey: ["applicants"] });
     qc.invalidateQueries({ queryKey: ["analytics"] });
   };
 
