@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/applications")({
 
 const statusStyles: Record<string, string> = {
   pending: "border-amber-400/50 text-amber-300",
+  shortlisted: "border-primary/50 text-primary",
   accepted: "border-emerald-400/50 text-emerald-300",
   rejected: "border-destructive/50 text-destructive",
   completed: "border-sky-400/50 text-sky-300",
