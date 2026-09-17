@@ -150,6 +150,47 @@ function MyApplications() {
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Applied {new Date(a.created_at).toLocaleDateString()}</span>
                       </div>
                       <Timeline status={a.status} appliedAt={a.created_at} updatedAt={a.updated_at} />
+
+                      {!!a.application_status_history?.length && (
+                        <details className="rounded-lg border border-border/40 bg-background/40 p-3">
+                          <summary className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <History className="h-3 w-3 text-primary" /> Status history ({a.application_status_history.length})
+                          </summary>
+                          <ul className="mt-2 space-y-1">
+                            {[...a.application_status_history]
+                              .sort((x: any, y: any) => +new Date(x.created_at) - +new Date(y.created_at))
+                              .map((h: any, i: number) => (
+                                <li key={i} className="text-xs text-muted-foreground">
+                                  {new Date(h.created_at).toLocaleString()} —{" "}
+                                  {h.old_status ? `${h.old_status} → ${h.new_status}` : `submitted as ${h.new_status}`}
+                                </li>
+                              ))}
+                          </ul>
+                        </details>
+                      )}
+
+                      {a.impact_submissions?.[0] && (
+                        <div className="rounded-lg border border-secondary/40 bg-secondary/5 p-3 text-xs">
+                          <div className="font-medium text-secondary">
+                            Impact reported {a.impact_submissions[0].verified ? "· verified by the organization" : "· awaiting verification"}
+                          </div>
+                          <div className="mt-1 text-muted-foreground">
+                            {a.impact_submissions[0].hours_contributed} hours · {a.impact_submissions[0].people_reached} people reached
+                          </div>
+                          {a.impact_submissions[0].summary && <p className="mt-1 text-muted-foreground">{a.impact_submissions[0].summary}</p>}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {(a.status === "pending" || a.status === "shortlisted") && (
+                          <Button variant="outline" size="sm" onClick={() => withdraw(a.id)}>
+                            <Undo2 className="mr-1 h-3.5 w-3.5" /> Withdraw
+                          </Button>
+                        )}
+                        {(a.status === "accepted" || a.status === "completed") && !a.impact_submissions?.[0] && (
+                          <ImpactDialog applicationId={a.id} volunteerId={a.volunteer_id} />
+                        )}
+                      </div>
                     </CardContent>
                   </div>
                 </div>
