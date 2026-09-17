@@ -33,7 +33,7 @@ function Applicants() {
       const { data, error } = await supabase
         .from("applications")
         .select(
-          "*, opportunities!inner(id, title, ngo_id, required_skills, location, description), volunteers(profile_id, skills, interests, availability, experience, preferred_location), profiles:volunteer_id(full_name, avatar, location)",
+          "*, opportunities!inner(id, title, ngo_id, required_skills, location, description), volunteers(profile_id, skills, interests, availability, experience, preferred_location), profiles:volunteer_id(full_name, avatar, location), impact_submissions(id, hours_contributed, people_reached, summary, verified)",
         )
         .eq("opportunities.ngo_id", profile!.id)
         .order("created_at", { ascending: false });
@@ -115,8 +115,11 @@ function Applicants() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="shortlisted">Shortlisted</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="withdrawn">Withdrawn</SelectItem>
             </SelectContent>
           </Select>
         </div>
