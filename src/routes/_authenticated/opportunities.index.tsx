@@ -205,6 +205,20 @@ function OpportunitiesList() {
               </SelectContent>
             </Select>
           </div>
+          {profile?.role === "volunteer" && (
+            <div className="md:col-span-5">
+              <Button
+                type="button"
+                variant={savedOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSavedOnly((v) => !v)}
+                aria-pressed={savedOnly}
+              >
+                <Bookmark className={savedOnly ? "mr-1.5 h-3.5 w-3.5 fill-current" : "mr-1.5 h-3.5 w-3.5"} />
+                {savedOnly ? "Showing saved only" : `Saved (${saved?.size ?? 0})`}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
