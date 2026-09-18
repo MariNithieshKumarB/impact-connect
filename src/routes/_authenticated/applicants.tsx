@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Check, X, Clock, MapPin, Briefcase } from "lucide-react";
+import { Check, X, Clock, MapPin, Briefcase, Star, ShieldCheck, BadgeCheck } from "lucide-react";
 import { computeMatch } from "@/lib/matching";
 import { MatchDetails } from "@/components/MatchBadge";
 import { useMemo, useState } from "react";
